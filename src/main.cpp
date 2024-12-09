@@ -1,18 +1,37 @@
-#include <Arduino.h>
+const int current_op = A0;
+const int start_stop_btn = 2;
+const int accelerator_pin = 3;
+const int brake_pin = 4;
+const int neutral_pin = 5;
+const int tsal_pin = 13;
 
-// put function declarations here:
-int myFunction(int, int);
+bool isVehicleRunning = false;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  pinMode(start_stop_btn, INPUT);
+  pinMode(accelerator_pin, INPUT);
+  pinMode(brake_pin, INPUT);
+  pinMode(neutral_pin, INPUT);
+  pinMode(tsal_pin, OUTPUT);
+  digitalWrite(tsal_pin, LOW);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
+  bool isNeutral = digitalRead(neutral_pin);
+  bool isAcceleratorPressed = digitalRead(accelerator_pin);
+  bool isBrakePressed = digitalRead(brake_pin);
+  bool isStartStopPressed = digitalRead(start_stop_btn);
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  if (!isVehicleRunning) {
+    if (isNeutral) {
+      if (isAcceleratorPressed) {
+        if (isBrakePressed && isStartStopPressed) {
+          isVehicleRunning = true;
+          digitalWrite(tsal_pin, HIGH);
+        }
+      }
+    }
+  } else {
+    digitalWrite(tsal_pin, HIGH);
+  }
 }
