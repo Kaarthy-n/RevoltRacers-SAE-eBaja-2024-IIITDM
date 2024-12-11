@@ -2,30 +2,30 @@
 #include <LiquidCrystal_I2C.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <MPU6050.h>
+#include <Adafruit_MPU6050.h>
 #include <SD.h>
 
-const int current_op = A0;
-const int start_stop_btn = 2;
-const int accelerator_pin = 3;
-const int brake_pin = 4;
-const int neutral_pin = 5;
-const int tsal_pin = 13;
-const int hall_pin = 6;
-const int temp_motor_pin = 7;
-const int temp_mcu_pin = 8;
+#define CURRENT_OUTPUT A0
+#define START_STOP_BTN 2
+#define ACCELERATOR_PIN 3
+#define BRAKE_PIN 4
+#define NEUTRAL_PIN 5
+#define TSAL_PIN 13
+#define HALL_PIN 6
+#define TEMP_MOTOR_PIN 7
+#define TEMP_MCU_PIN 8
 
-const int chipSelect = 10;
+#define CHIP_SELECT 10
 
 LiquidCrystal_I2C lcd(0x3F, 16, 2);
-OneWire oneWireMotor(temp_motor_pin);
+OneWire oneWireMotor(TEMP_MOTOR_PIN);
 DallasTemperature sensorsMotor(&oneWireMotor);
 
-OneWire oneWireMCU(temp_mcu_pin);
+OneWire oneWireMCU(TEMP_MCU_PIN);
 DallasTemperature sensorsMCU(&oneWireMCU);
 
-MPU6050 mpu;
-File dataFile;
+Adafruit_MPU6050 mpu;
+File logfile;
 
 bool isVehicleRunning = false;
 unsigned long lastPulseTime = 0;
@@ -36,14 +36,14 @@ float mcuTemperature = 0.0;
 bool currentWarning = false;
 
 void setup() {
-  pinMode(start_stop_btn, INPUT);
-  pinMode(accelerator_pin, INPUT);
-  pinMode(brake_pin, INPUT);
-  pinMode(neutral_pin, INPUT);
-  pinMode(tsal_pin, OUTPUT);
-  pinMode(hall_pin, INPUT);
+  pinMode(START_STOP_BTN, INPUT);
+  pinMode(ACCELERATOR_PIN, INPUT);
+  pinMode(BRAKE_PIN, INPUT);
+  pinMode(NEUTRAL_PIN, INPUT);
+  pinMode(TSAL_PIN, OUTPUT);
+  pinMode(HALL_PIN, INPUT);
 
-  digitalWrite(tsal_pin, LOW);
+  digitalWrite(TSAL_PIN, LOW);
 
   lcd.begin(16, 2);
   lcd.print("eBAJA Vehicle");
@@ -52,23 +52,23 @@ void setup() {
   sensorsMCU.begin();
 
   Wire.begin();
-  mpu.initialize();
-  if (!mpu.testConnection()) {
+
+  if (!mpu.begin();) {
     lcd.clear();
     lcd.print("MPU6050 Error!");
     while (1);
   }
 
-  if (!SD.begin(chipSelect)) {
+  if (!SD.begin(CHIP_SELECT)) {
     lcd.clear();
     lcd.print("SD Error!");
     while (1);
   }
 
-  dataFile = SD.open("sensor_data.txt", FILE_WRITE);
-  if (dataFile) {
-    dataFile.println("Time, Accel X, Accel Y, Accel Z, Gyro X, Gyro Y, Gyro Z, Speed, Motor Temp, MCU Temp");
-    dataFile.close();
+  logfile = SD.open("sensor_data.txt", FILE_WRITE);
+  if (logfile) {
+    logfile.println("Time, Accel X, Accel Y, Accel Z, Gyro X, Gyro Y, Gyro Z, Speed, Motor Temp, MCU Temp");
+    logfile.close();
   } else {
     lcd.clear();
     lcd.print("Error opening file");
@@ -77,28 +77,28 @@ void setup() {
 }
 
 void loop() {
-  bool isNeutral = digitalRead(neutral_pin);
-  bool isAcceleratorPressed = digitalRead(accelerator_pin);
-  bool isBrakePressed = digitalRead(brake_pin);
-  bool isStartStopPressed = digitalRead(start_stop_btn);
+  bool isNeutral = digitalRead(NEUTRAL_PIN);
+  bool isAcceleratorPressed = digitalRead(ACCELERATOR_PIN);
+  bool isBrakePressed = digitalRead(BRAKE_PIN);
+  bool isStartStopPressed = digitalRead(START_STOP_BTN);
 
   if (!isVehicleRunning) {
     if (isNeutral) {
       if (isAcceleratorPressed) {
         if (isBrakePressed && isStartStopPressed) {
           isVehicleRunning = true;
-          digitalWrite(tsal_pin, HIGH);
+          digitalWrite(TSAL_PIN, HIGH);
         }
       }
     }
   } else {
-    digitalWrite(tsal_pin, HIGH);
+    digitalWrite(TSAL_PIN, HIGH);
   }
 
   motorSpeed = calculateMotorSpeed();
-  currentReading = analogRead(current_op);
-  motorTemperature = getTemperature(temp_motor_pin);
-  mcuTemperature = getTemperature(temp_mcu_pin);
+  currentReading = analogRead(CURRENT_OUTPUT);
+  motorTemperature = getTemperature(TEMP_MOTOR_PIN);
+  mcuTemperature = getTemperature(TEMP_MCU_PIN);
 
   if (currentReading > 500) {
     currentWarning = true;
@@ -109,20 +109,20 @@ void loop() {
   int16_t ax, ay, az, gx, gy, gz;
   mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-  dataFile = SD.open("sensor_data.txt", FILE_WRITE);
-  if (dataFile) {
+  logfile = SD.open("sensor_data.txt", FILE_WRITE);
+  if (logfile) {
     unsigned long currentTime = millis();
-    dataFile.print(currentTime); dataFile.print(", ");
-    dataFile.print(ax); dataFile.print(", ");
-    dataFile.print(ay); dataFile.print(", ");
-    dataFile.print(az); dataFile.print(", ");
-    dataFile.print(gx); dataFile.print(", ");
-    dataFile.print(gy); dataFile.print(", ");
-    dataFile.print(gz); dataFile.print(", ");
-    dataFile.print(motorSpeed); dataFile.print(", ");
-    dataFile.print(motorTemperature); dataFile.print(", ");
-    dataFile.println(mcuTemperature);
-    dataFile.close();
+    logfile.print(currentTime); logfile.print(", ");
+    logfile.print(ax); logfile.print(", ");
+    logfile.print(ay); logfile.print(", ");
+    logfile.print(az); logfile.print(", ");
+    logfile.print(gx); logfile.print(", ");
+    logfile.print(gy); logfile.print(", ");
+    logfile.print(gz); logfile.print(", ");
+    logfile.print(motorSpeed); logfile.print(", ");
+    logfile.print(motorTemperature); logfile.print(", ");
+    logfile.println(mcuTemperature);
+    logfile.close();
   }
 
   displayData();
